@@ -135,7 +135,18 @@
             font-weight: 700;
         }
         .btn-save:hover { background: #557358; transform: scale(1.02); }
-        .btn-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        
+        .btn-refresh {
+            background: #4a7c9e;
+            color: white;
+        }
+        .btn-refresh:hover { background: #3a6280; }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
 
         .btn:hover { transform: translateY(-1px); filter: brightness(0.96); }
 
@@ -300,20 +311,6 @@
             70% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-20px); visibility: hidden; }
         }
-        
-        .loading-indicator {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 0.6s linear infinite;
-            margin-left: 8px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
@@ -329,8 +326,8 @@
         <div class="btn-group">
             <button class="btn btn-success" id="addRowEndBtn">➕ Incluir (final)</button>
             <button class="btn btn-primary" id="printTableBtn">🖨️ Imprimir / PDF</button>
-            <button class="btn btn-save" id="syncNowBtn">💾 Salvar Alterações</button>
-            <button class="btn btn-primary" id="refreshDataBtn">🔄 Recarregar Dados</button>
+            <button class="btn btn-save" id="saveBtn">💾 Salvar Alterações</button>
+            <button class="btn btn-refresh" id="refreshBtn">🔄 Recarregar Dados</button>
         </div>
         <div class="search-box">
             <span>🔍</span>
@@ -380,22 +377,15 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     
-    // Configurar Firestore para melhor desempenho
-    db.settings({
-        cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
-    });
-    
     // ==================== VARIÁVEIS GLOBAIS ====================
     let currentData = [];
     let selectedRowIndex = null;
     let currentFilter = '';
     let isSaving = false;
     
-    // Coleções do Firestore
     const COL_PROGRAMA = "programa2026";
     const DOC_DADOS = "dados";
     
-    // Dados originais
     const originalData = [
         { data: "2026-01-14", palavra: "62. No campo do verbo.", tema: "MARCILEY", recepcao: "EVALDO" },
         { data: "2026-01-21", palavra: "63. No campo da vida.", tema: "MIRIAM", recepcao: "MAURICIO" },
@@ -428,7 +418,7 @@
         { data: "2026-07-29", palavra: "90. Em constante renovação.", tema: "MIRIAM", recepcao: "MARCOS" }
     ];
     
-    // ==================== FUNÇÕES DE UTILITÁRIO ====================
+    // ==================== FUNÇÕES ====================
     function mostrarNotificacao(mensagem, tipo = "sucesso") {
         const toast = document.createElement('div');
         toast.className = 'toast-message';
@@ -444,18 +434,8 @@
             statusEl.className = `sync-status ${estado}`;
             if (estado === 'syncing') statusEl.textContent = '⏳ Salvando...';
             else if (estado === 'error') statusEl.textContent = `⚠️ ${mensagem || 'Erro'}`;
-            else if (estado === 'success') statusEl.textContent = mensagem || '✅ Salvo!';
-            else statusEl.textContent = mensagem || '✅ Conectado';
-            
-            // Resetar status após 3 segundos se for sucesso
-            if (estado === 'success') {
-                setTimeout(() => {
-                    if (statusEl.className === 'sync-status success') {
-                        statusEl.className = 'sync-status';
-                        statusEl.textContent = '✅ Conectado';
-                    }
-                }, 3000);
-            }
+            else if (estado === 'success') statusEl.textContent = '✅ Salvo!';
+            else statusEl.textContent = '✅ Conectado';
         }
     }
     
@@ -480,24 +460,24 @@
         return brDate;
     }
     
-    // ==================== SYNC COM FIRESTORE ====================
+    // ==================== SALVAR NO FIRESTORE ====================
     async function salvarNoFirestore() {
         if (isSaving) {
-            console.log("Já está salvando...");
+            mostrarNotificacao("⏳ Já está salvando, aguarde...");
             return false;
         }
         
         isSaving = true;
         atualizarStatusSync('syncing');
         
-        const saveBtn = document.getElementById('syncNowBtn');
+        const saveBtn = document.getElementById('saveBtn');
         if (saveBtn) {
             saveBtn.disabled = true;
             saveBtn.innerHTML = '💾 Salvando...';
         }
         
         try {
-            console.log("Iniciando salvamento no Firestore...");
+            console.log("Salvando dados no Firestore...");
             const docRef = db.collection(COL_PROGRAMA).doc(DOC_DADOS);
             
             await docRef.set({
@@ -505,18 +485,17 @@
                 ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
             });
             
-            console.log("✅ Dados salvos com sucesso no Firestore!");
-            atualizarStatusSync('success', '✅ Salvo na nuvem!');
+            console.log("✅ Dados salvos com sucesso!");
+            atualizarStatusSync('success');
             mostrarNotificacao("💾 Dados salvos na nuvem com sucesso!");
             
-            // Salvar backup local também
             localStorage.setItem('cei_luz_divina_backup', JSON.stringify(currentData));
             
             return true;
         } catch (error) {
-            console.error("❌ Erro detalhado ao salvar:", error);
-            atualizarStatusSync('error', 'Erro: ' + (error.message || 'Falha na conexão'));
-            mostrarNotificacao("❌ Erro ao salvar: " + (error.message || "Verifique sua internet"), "erro");
+            console.error("❌ Erro ao salvar:", error);
+            atualizarStatusSync('error', error.message);
+            mostrarNotificacao("❌ Erro ao salvar: " + error.message, "erro");
             return false;
         } finally {
             isSaving = false;
@@ -524,13 +503,20 @@
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '💾 Salvar Alterações';
             }
+            
+            setTimeout(() => {
+                const statusEl = document.getElementById('syncStatus');
+                if (statusEl && statusEl.className === 'sync-status success') {
+                    statusEl.className = 'sync-status';
+                    statusEl.textContent = '✅ Conectado';
+                }
+            }, 3000);
         }
     }
     
-    async function carregarDoFirestore(mostrarFeedback = true) {
-        if (mostrarFeedback) {
-            atualizarStatusSync('syncing', 'Carregando...');
-        }
+    // ==================== CARREGAR DO FIRESTORE ====================
+    async function carregarDoFirestore() {
+        atualizarStatusSync('syncing', 'Carregando...');
         
         try {
             console.log("Carregando dados do Firestore...");
@@ -539,35 +525,27 @@
             
             if (docSnap.exists && docSnap.data().dados && docSnap.data().dados.length > 0) {
                 currentData = docSnap.data().dados;
-                console.log("📥 Dados carregados do Firestore:", currentData.length, "itens");
-                if (mostrarFeedback) {
-                    atualizarStatusSync('success', '✅ Dados carregados!');
-                    mostrarNotificacao("☁️ Dados carregados da nuvem!");
-                }
+                console.log("📥 Dados carregados:", currentData.length, "itens");
+                mostrarNotificacao("☁️ Dados carregados da nuvem!");
+                atualizarStatusSync('success', '✅ Carregado');
                 renderizarTabela();
                 return true;
             } else {
                 console.log("📭 Nenhum dado no Firestore, usando dados padrão");
                 currentData = JSON.parse(JSON.stringify(originalData));
                 await salvarNoFirestore();
-                if (mostrarFeedback) {
-                    atualizarStatusSync('success', '✅ Dados padrão carregados');
-                }
                 renderizarTabela();
+                atualizarStatusSync('success', '✅ Padrão carregado');
                 return false;
             }
         } catch (error) {
-            console.error("❌ Erro ao carregar do Firestore:", error);
-            if (mostrarFeedback) {
-                atualizarStatusSync('error', 'Offline - usando local');
-                mostrarNotificacao("⚠️ Erro ao carregar da nuvem. Usando dados locais.", "erro");
-            }
+            console.error("❌ Erro ao carregar:", error);
+            atualizarStatusSync('error', 'Offline');
+            mostrarNotificacao("⚠️ Erro ao carregar da nuvem. Usando dados locais.", "erro");
             
-            // Fallback para dados locais
             const localData = localStorage.getItem('cei_luz_divina_backup');
             if (localData) {
                 currentData = JSON.parse(localData);
-                console.log("Usando backup local");
             } else {
                 currentData = JSON.parse(JSON.stringify(originalData));
             }
@@ -576,20 +554,7 @@
         }
     }
     
-    // Função para salvar e forçar recarregamento da página
-    async function salvarERecarregar() {
-        const sucesso = await salvarNoFirestore();
-        if (sucesso) {
-            mostrarNotificacao("✅ Salvo! Recarregando dados para todos...");
-            // Pequeno delay para garantir que o Firestore processou
-            setTimeout(async () => {
-                await carregarDoFirestore(true);
-                mostrarNotificacao("🔄 Dados atualizados da nuvem!");
-            }, 500);
-        }
-    }
-    
-    // ==================== FUNÇÕES DE MANIPULAÇÃO DE DADOS ====================
+    // ==================== FUNÇÕES DE MANIPULAÇÃO ====================
     function generateNewItem() {
         let newNumber = 91;
         let lastDate = "2026-08-05";
@@ -644,7 +609,7 @@
         }
     }
     
-    // ==================== RENDERIZAÇÃO DA TABELA ====================
+    // ==================== RENDERIZAÇÃO ====================
     function renderizarTabela() {
         const tbody = document.getElementById('tableBody');
         if (!tbody) return;
@@ -790,7 +755,8 @@
     
     async function refreshData() {
         mostrarNotificacao("🔄 Atualizando dados da nuvem...");
-        await carregarDoFirestore(true);
+        await carregarDoFirestore();
+        mostrarNotificacao("✅ Dados atualizados!");
     }
     
     function buildMonthFilter() {
@@ -837,9 +803,7 @@
             if (savedTitle) colunaTitulo.textContent = savedTitle;
             colunaTitulo.addEventListener('blur', function() {
                 const newTitle = colunaTitulo.textContent.trim();
-                if (newTitle) {
-                    localStorage.setItem('colunaPalavraTitulo', newTitle);
-                }
+                if (newTitle) localStorage.setItem('colunaPalavraTitulo', newTitle);
             });
         }
     }
@@ -851,9 +815,7 @@
             if (saved && saved.trim()) subtitleEl.textContent = saved;
             subtitleEl.addEventListener('blur', () => {
                 const newSubtitle = subtitleEl.textContent.trim();
-                if (newSubtitle) {
-                    localStorage.setItem('programSubtitleCEI2026', newSubtitle);
-                }
+                if (newSubtitle) localStorage.setItem('programSubtitleCEI2026', newSubtitle);
             });
         }
     }
@@ -861,8 +823,8 @@
     function setupGlobalButtons() {
         document.getElementById('addRowEndBtn')?.addEventListener('click', addToEnd);
         document.getElementById('printTableBtn')?.addEventListener('click', printTable);
-        document.getElementById('syncNowBtn')?.addEventListener('click', salvarERecarregar);
-        document.getElementById('refreshDataBtn')?.addEventListener('click', refreshData);
+        document.getElementById('saveBtn')?.addEventListener('click', salvarNoFirestore);
+        document.getElementById('refreshBtn')?.addEventListener('click', refreshData);
     }
     
     // ==================== INICIALIZAÇÃO ====================
@@ -873,27 +835,25 @@
         setupEditableSubtitle();
         setupColumnTitleEditing();
         
-        // Carregar dados do Firestore
-        await carregarDoFirestore(true);
+        await carregarDoFirestore();
         
-        // Configurar listener para mudanças em tempo real
+        // Listener em tempo real para atualizar automaticamente
         const docRef = db.collection(COL_PROGRAMA).doc(DOC_DADOS);
         docRef.onSnapshot((docSnap) => {
-            if (docSnap.exists && docSnap.data().dados) {
+            if (docSnap.exists && docSnap.data().dados && !isSaving) {
                 const novosDados = docSnap.data().dados;
-                // Verificar se os dados realmente mudaram
                 if (JSON.stringify(novosDados) !== JSON.stringify(currentData)) {
-                    console.log("🔄 Detectada mudança remota! Atualizando...");
+                    console.log("🔄 Mudança detectada! Atualizando...");
                     currentData = novosDados;
                     renderizarTabela();
-                    mostrarNotificacao("🔄 Dados atualizados automaticamente da nuvem!");
+                    mostrarNotificacao("🔄 Dados atualizados automaticamente!");
                 }
             }
         }, (error) => {
             console.error("Erro no listener:", error);
         });
         
-        mostrarNotificacao("✅ Programa carregado! Alterações são salvas automaticamente na nuvem.");
+        mostrarNotificacao("✅ Programa carregado! Dados sincronizados na nuvem.");
     }
     
     init();
