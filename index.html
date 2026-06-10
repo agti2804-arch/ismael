@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Programa Temático 2026 - Centro Espírita Ismael</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f0ede5 0%, #e0d8ca 100%);
+            font-family: 'Segoe UI', 'Roboto', 'Merriweather', 'Georgia', serif;
+            padding: 2rem 1.5rem;
+            color: #2c2418;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 253, 245, 0.95);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            padding: 1.5rem 1.8rem 2.2rem 1.8rem;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #dccfae;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+        }
+
+        .title-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .main-title {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #3f2e1e, #7c5f3a);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            font-weight: 700;
+            display: inline-block;
+            padding: 0.2rem 0.8rem;
+            border-radius: 60px;
+            letter-spacing: -0.5px;
+            cursor: default;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: #8b7a60;
+            font-style: italic;
+            font-weight: 500;
+            letter-spacing: 1px;
+            border-top: 1px dashed #dccfae;
+            padding-top: 0.5rem;
+            display: inline-block;
+            cursor: text;
+            transition: all 0.2s;
+            background: transparent;
+            border-radius: 30px;
+            padding: 0.3rem 1rem;
+        }
+        .subtitle:hover {
+            background: rgba(180, 139, 74, 0.1);
+        }
+        .subtitle:focus {
+            background: #fff3db;
+            color: #5a442a;
+            outline: 2px solid #cbb66b;
+            box-shadow: 0 0 0 3px rgba(203, 182, 107, 0.3);
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: #f9f4e8;
+            padding: 0.8rem 1.2rem;
+            border-radius: 60px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #e8dfce;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.15s;
+            font-family: inherit;
+            color: #4a3a26;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .btn-primary {
+            background: #b48b4a;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-primary:hover { background: #9b753c; transform: scale(0.97); }
+
+        .btn-success { background: #5f8b6f; color: white; }
+        .btn-success:hover { background: #4e735b; }
+
+        .btn-save { 
+            background: #6b8c6e; 
+            color: white;
+            font-weight: 700;
+        }
+        .btn-save:hover { background: #557358; transform: scale(1.02); }
+
+        .btn:hover { transform: translateY(-1px); filter: brightness(0.96); }
+
+        .search-box {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: white;
+            padding: 4px 12px;
+            border-radius: 40px;
+            border: 1px solid #ddcea9;
+        }
+        .search-box input {
+            border: none;
+            padding: 8px 5px;
+            width: 210px;
+            outline: none;
+            font-family: inherit;
+            background: transparent;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 1.2rem;
+            margin: 1rem 0 1rem 0;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+        }
+
+        .agenda-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            background-color: #fffef9;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+        .agenda-table th {
+            background-color: #d9cbae;
+            color: #2a241a;
+            font-weight: 700;
+            padding: 12px 10px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #bfae8a;
+        }
+        .editable-column-title {
+            cursor: text;
+            transition: all 0.2s;
+            border-radius: 8px;
+            padding: 4px 8px;
+            display: inline-block;
+        }
+        .editable-column-title:hover {
+            background: rgba(255,255,200,0.5);
+        }
+        .editable-column-title:focus {
+            background: #fff8e0;
+            outline: 2px solid #cbb66b;
+            box-shadow: 0 0 0 3px rgba(203, 182, 107, 0.3);
+        }
+        .agenda-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #ece2d0;
+            vertical-align: middle;
+        }
+        .agenda-table tr:hover td { background-color: #fef7e9; }
+
+        .editable-cell {
+            cursor: text;
+            transition: background 0.1s;
+            word-break: break-word;
+        }
+        .editable-cell:focus {
+            background-color: #fff3db;
+            outline: 1px solid #cbb66b;
+            border-radius: 6px;
+        }
+        [contenteditable="true"] {
+            padding: 5px 6px;
+            border-radius: 8px;
+            display: inline-block;
+            width: 100%;
+            min-width: 100px;
+        }
+        .palavra-text { font-weight: 600; color: #8b5a2b; }
+
+        .insights {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px dashed #d6c8ae;
+        }
+        .card {
+            background: #fff9ef;
+            border-radius: 1.2rem;
+            padding: 0.7rem 1.2rem;
+            flex: 1;
+            min-width: 160px;
+        }
+        .card h3 {
+            font-size: 0.9rem;
+            border-left: 4px solid #b48b4a;
+            padding-left: 0.6rem;
+            margin-bottom: 0.5rem;
+        }
+        .count-badge { font-weight: 800; color: #b46f2c; margin-right: 5px; }
+        footer { text-align: center; margin-top: 1.5rem; font-size: 0.7rem; color: #af9a74; }
+
+        .sync-status {
+            font-size: 0.7rem;
+            margin-left: 10px;
+            color: #5f8b6f;
+        }
+        .sync-status.syncing { color: #c9a03d; }
+        .sync-status.error { color: #b5655a; }
+
+        @media print {
+            body { background: white; padding: 0.2in; margin: 0; }
+            .container { box-shadow: none; padding: 0; background: white; }
+            .toolbar, .btn-group, .search-box, .insights, footer, .month-nav, .btn, .no-print, .sync-status { display: none !important; }
+            .agenda-table th, .agenda-table td { border: 1px solid #ccc; }
+            .main-title { background: none; color: black !important; -webkit-text-fill-color: black; border: none; }
+            .subtitle { background: none; color: black !important; border: none; }
+        }
+        .month-nav {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+        }
+        .month-btn {
+            background: #f2ebdd;
+            border: 1px solid #cfbf99;
+            border-radius: 30px;
+            padding: 4px 14px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .info-status { font-size: 0.75rem; color: #b38647; margin-left: 10px; }
+        .selected-row-highlight { background-color: #fff0d6 !important; }
+        
+        .toast-message {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #4a7c59;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            z-index: 3000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            animation: fadeOut 3s ease forwards;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateY(0); }
+            70% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); visibility: hidden; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="title-area">
+            <h1 class="main-title">✨ Equipe C.E.I Luz Divina ✨</h1>
+            <div id="subtitle" class="subtitle" contenteditable="true" title="Clique para editar o nome do livro">📖 Livro Palavras de Vida Eterna</div>
+        </div>
+    </div>
+
+    <div class="toolbar no-print">
+        <div class="btn-group">
+            <button class="btn btn-success" id="addRowEndBtn">➕ Incluir (final)</button>
+            <button class="btn btn-primary" id="printTableBtn">🖨️ Imprimir / PDF</button>
+            <button class="btn btn-save" id="syncNowBtn">💾 Salvar Alterações</button>
+        </div>
+        <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="searchInput" placeholder="Buscar palavra, tema, recepção...">
+            <span id="syncStatus" class="sync-status">✅ Cloud ativo</span>
+        </div>
+    </div>
+
+    <div class="month-nav no-print" id="monthNav"></div>
+
+    <div class="table-wrapper">
+        <table class="agenda-table" id="programTable">
+            <thead>
+                <tr>
+                    <th>📆 Data</th>
+                    <th id="colunaPalavraHeader">
+                        <span id="colunaPalavraTitulo" class="editable-column-title" contenteditable="true" title="Clique para editar o título desta coluna">✨ Palavra de Vida Eterna</span>
+                    </th>
+                    <th>🗣️ Tema (Responsável)</th>
+                    <th>🤝 Recepção</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="insights no-print">
+        <div class="card"><h3>📌 Líderes de Tema</h3><p id="statsTema"></p></div>
+        <div class="card"><h3>❤️ Equipe Recepção</h3><p id="statsRecepcao"></p></div>
+        <div class="card"><h3>📅 Total de semanas</h3><p id="totalSemanas"></p></div>
+    </div>
+    <footer class="no-print">* Clique nas células para edição direta. As alterações são sincronizadas automaticamente com a nuvem.</footer>
+</div>
+
+<script>
+    // ==================== CONFIGURAÇÃO DO FIREBASE ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyDg-ZHdOKKx_9hFv7cMhxP77qjOWjc4iPU",
+        authDomain: "programa-2026-4682d.firebaseapp.com",
+        projectId: "programa-2026-4682d",
+        storageBucket: "programa-2026-4682d.firebasestorage.app",
+        messagingSenderId: "1086492079770",
+        appId: "1:1086492079770:web:692be63a1ce60f9c1815f6"
+    };
+    
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    
+    // ==================== VARIÁVEIS GLOBAIS ====================
+    let currentData = [];
+    let selectedRowIndex = null;
+    let currentFilter = '';
+    let isSyncing = false;
+    let syncTimeout = null;
+    
+    // Coleções do Firestore
+    const COL_PROGRAMA = "programa2026";
+    const DOC_DADOS = "dados";
+    
+    // Dados originais
+    const originalData = [
+        { data: "2026-01-14", palavra: "62. No campo do verbo.", tema: "MARCILEY", recepcao: "EVALDO" },
+        { data: "2026-01-21", palavra: "63. No campo da vida.", tema: "MIRIAM", recepcao: "MAURICIO" },
+        { data: "2026-01-28", palavra: "64. Êxito.", tema: "PATRICIA", recepcao: "MARCILEY" },
+        { data: "2026-02-04", palavra: "65. Defesa.", tema: "MARCILEY", recepcao: "ADRIANA" },
+        { data: "2026-02-11", palavra: "66. O primeiro passo.", tema: "MIRIAM", recepcao: "PATRICIA" },
+        { data: "2026-02-18", palavra: "67. A melhor medida.", tema: "PATRICIA", recepcao: "EVALDO" },
+        { data: "2026-02-25", palavra: "68. Aguardemos.", tema: "MARCILEY", recepcao: "ADRIANA" },
+        { data: "2026-03-04", palavra: "69. Na luz da compaixão.", tema: "MIRIAM", recepcao: "MARCILEY" },
+        { data: "2026-03-11", palavra: "70. Pacifica sempre.", tema: "PATRICIA", recepcao: "ADRIANA" },
+        { data: "2026-03-18", palavra: "71. Olhos.", tema: "MARCILEY", recepcao: "MAURICIO" },
+        { data: "2026-03-25", palavra: "72. Ouvidos.", tema: "MIRIAM", recepcao: "EVALDO" },
+        { data: "2026-04-01", palavra: "73. Excesso.", tema: "PATRICIA", recepcao: "MAURICIO" },
+        { data: "2026-04-08", palavra: "74. Nossa cruz.", tema: "MIRIAM", recepcao: "PATRICIA" },
+        { data: "2026-04-15", palavra: "75. Libertemos.", tema: "PATRICIA", recepcao: "ADRIANA" },
+        { data: "2026-04-22", palavra: "76. Socorramos.", tema: "MIRIAM", recepcao: "MAURICIO" },
+        { data: "2026-04-29", palavra: "77. Se procuras o melhor.", tema: "PATRICIA", recepcao: "EVALDO" },
+        { data: "2026-05-06", palavra: "78. Melhorando sempre.", tema: "MIRIAM", recepcao: "MARCOS" },
+        { data: "2026-05-13", palavra: "79. Pacifiquemos.", tema: "PATRICIA", recepcao: "ADRIANA" },
+        { data: "2026-05-20", palavra: "80. Bendigamos.", tema: "MIRIAM", recepcao: "MAURICIO" },
+        { data: "2026-05-27", palavra: "81. Prosseguindo.", tema: "PATRICIA", recepcao: "EVALDO" },
+        { data: "2026-06-03", palavra: "82. Tua obra.", tema: "MIRIAM", recepcao: "MARCOS" },
+        { data: "2026-06-10", palavra: "83. Presença divina.", tema: "PATRICIA", recepcao: "ADRIANA" },
+        { data: "2026-06-17", palavra: "84. Divinos dons.", tema: "MIRIAM", recepcao: "MAURICIO" },
+        { data: "2026-06-24", palavra: "85. Se aspiras a servir.", tema: "PATRICIA", recepcao: "EVALDO" },
+        { data: "2026-07-01", palavra: "86. Não te inquietes.", tema: "MIRIAM", recepcao: "MARCOS" },
+        { data: "2026-07-08", palavra: "87. Alimento verbal.", tema: "PATRICIA", recepcao: "ADRIANA" },
+        { data: "2026-07-15", palavra: "88. Vasos de barro.", tema: "MIRIAM", recepcao: "MAURICIO" },
+        { data: "2026-07-22", palavra: "89. Inesquecível advertência.", tema: "PATRICIA", recepcao: "EVALDO" },
+        { data: "2026-07-29", palavra: "90. Em constante renovação.", tema: "MIRIAM", recepcao: "MARCOS" }
+    ];
+    
+    // ==================== FUNÇÕES DE UTILITÁRIO ====================
+    function mostrarNotificacao(mensagem, tipo = "sucesso") {
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.style.background = tipo === "sucesso" ? "#4a7c59" : "#b5655a";
+        toast.textContent = mensagem;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    
+    function atualizarStatusSync(estado, mensagem = "") {
+        const statusEl = document.getElementById('syncStatus');
+        if (statusEl) {
+            statusEl.className = `sync-status ${estado}`;
+            if (estado === 'syncing') statusEl.textContent = '⏳ Salvando...';
+            else if (estado === 'error') statusEl.textContent = `⚠️ ${mensagem || 'Erro'}`;
+            else statusEl.textContent = mensagem || '✅ Cloud ativo';
+        }
+    }
+    
+    function formatDateToBR(dateStr) {
+        if (!dateStr) return "";
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return dateStr;
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    
+    function formatDateToISO(brDate) {
+        if (!brDate) return "";
+        let parts = brDate.split('/');
+        if (parts.length === 3) {
+            let year = parts[2];
+            let month = parts[1].padStart(2,'0');
+            let day = parts[0].padStart(2,'0');
+            if (year.length === 4 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                return `${year}-${month}-${day}`;
+            }
+        }
+        return brDate;
+    }
+    
+    // ==================== SYNC COM FIRESTORE ====================
+    async function salvarNoFirestore() {
+        if (isSyncing) return;
+        isSyncing = true;
+        atualizarStatusSync('syncing');
+        
+        try {
+            const docRef = db.collection(COL_PROGRAMA).doc(DOC_DADOS);
+            await docRef.set({
+                dados: currentData,
+                ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log("✅ Dados salvos no Firestore");
+            atualizarStatusSync('success', '✅ Salvo!');
+            mostrarNotificacao("💾 Dados salvos na nuvem com sucesso!");
+        } catch (error) {
+            console.error("❌ Erro ao salvar no Firestore:", error);
+            atualizarStatusSync('error', 'Erro ao salvar');
+            mostrarNotificacao("❌ Erro ao salvar na nuvem. Verifique sua conexão.", "erro");
+        } finally {
+            isSyncing = false;
+        }
+    }
+    
+    async function carregarDoFirestore() {
+        atualizarStatusSync('syncing', 'Carregando...');
+        
+        try {
+            const docRef = db.collection(COL_PROGRAMA).doc(DOC_DADOS);
+            const docSnap = await docRef.get();
+            
+            if (docSnap.exists && docSnap.data().dados && docSnap.data().dados.length > 0) {
+                currentData = docSnap.data().dados;
+                console.log("📥 Dados carregados do Firestore,", currentData.length, "itens");
+                atualizarStatusSync('success', '✅ Conectado');
+                mostrarNotificacao("☁️ Dados carregados da nuvem!");
+                return true;
+            } else {
+                console.log("📭 Nenhum dado no Firestore, usando dados padrão");
+                currentData = JSON.parse(JSON.stringify(originalData));
+                await salvarNoFirestore();
+                atualizarStatusSync('success', '✅ Conectado');
+                return false;
+            }
+        } catch (error) {
+            console.error("❌ Erro ao carregar do Firestore:", error);
+            atualizarStatusSync('error', 'Offline');
+            mostrarNotificacao("⚠️ Não foi possível conectar à nuvem. Usando dados locais.", "erro");
+            const localData = localStorage.getItem('cei_luz_divina_backup');
+            if (localData) {
+                currentData = JSON.parse(localData);
+            } else {
+                currentData = JSON.parse(JSON.stringify(originalData));
+            }
+            return false;
+        } finally {
+            renderizarTabela();
+        }
+    }
+    
+    // Sincronização automática com debounce
+    function syncAfterChange() {
+        if (syncTimeout) clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(() => {
+            salvarNoFirestore();
+            localStorage.setItem('cei_luz_divina_backup', JSON.stringify(currentData));
+        }, 1000);
+    }
+    
+    // ==================== FUNÇÕES DE MANIPULAÇÃO DE DADOS ====================
+    function generateNewItem() {
+        let newNumber = 91;
+        let lastDate = "2026-08-05";
+        if (currentData.length > 0) {
+            const lastItem = currentData[currentData.length-1];
+            const matchNum = lastItem.palavra.match(/(\d+)\./);
+            if (matchNum) newNumber = parseInt(matchNum[1]) + 1;
+            else newNumber = currentData.length + 62;
+            if (lastItem.data && lastItem.data.match(/\d{4}-\d{2}-\d{2}/)) {
+                let date = new Date(lastItem.data);
+                date.setDate(date.getDate() + 7);
+                lastDate = date.toISOString().split('T')[0];
+            }
+        }
+        return {
+            data: lastDate,
+            palavra: `${newNumber}. Nova reflexão.`,
+            tema: "NOVO",
+            recepcao: "COLABORADOR"
+        };
+    }
+    
+    function addToEnd() {
+        const newItem = generateNewItem();
+        currentData.push(newItem);
+        
+        let counter = 62;
+        for (let i = 0; i < currentData.length; i++) {
+            const match = currentData[i].palavra.match(/(\d+)\.\s*(.*)/);
+            if (match && match[1] && match[2]) {
+                currentData[i].palavra = `${counter}. ${match[2]}`;
+            } else if (match && match[1]) {
+                currentData[i].palavra = `${counter}. ${currentData[i].palavra.substring(match[1].length + 2)}`;
+            } else {
+                currentData[i].palavra = `${counter}. ${currentData[i].palavra}`;
+            }
+            counter++;
+        }
+        
+        selectedRowIndex = currentData.length - 1;
+        renderizarTabela();
+        syncAfterChange();
+        mostrarNotificacao("✅ Nova semana adicionada! Salvando...");
+    }
+    
+    function editarCelula(idx, campo, novoValor) {
+        if (currentData[idx] && currentData[idx][campo] !== undefined) {
+            currentData[idx][campo] = novoValor;
+            renderizarTabela();
+            syncAfterChange();
+            mostrarNotificacao("💾 Alteração salva...");
+        }
+    }
+    
+    // ==================== RENDERIZAÇÃO DA TABELA ====================
+    function renderizarTabela() {
+        const tbody = document.getElementById('tableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        
+        if (currentData.length === 0) {
+            const emptyRow = tbody.insertRow();
+            const emptyCell = emptyRow.insertCell(0);
+            emptyCell.colSpan = 4;
+            emptyCell.textContent = "📋 Nenhuma semana cadastrada. Clique em 'Incluir' para adicionar uma nova semana.";
+            emptyCell.style.textAlign = "center";
+            emptyCell.style.padding = "2rem";
+            emptyCell.style.fontStyle = "italic";
+            emptyCell.style.color = "#8b7a60";
+            atualizarStats();
+            return;
+        }
+        
+        currentData.forEach((item, idx) => {
+            const row = tbody.insertRow();
+            if (selectedRowIndex === idx) row.classList.add('selected-row-highlight');
+            
+            const tdData = row.insertCell(0);
+            const dataSpan = document.createElement('span');
+            dataSpan.setAttribute('contenteditable', 'true');
+            dataSpan.classList.add('editable-cell');
+            dataSpan.textContent = formatDateToBR(item.data);
+            dataSpan.addEventListener('blur', function(e) {
+                const newValue = e.target.textContent.trim();
+                const oldValue = item.data;
+                if (newValue && newValue !== formatDateToBR(oldValue)) {
+                    const iso = formatDateToISO(newValue);
+                    if (iso && iso.match(/\d{4}-\d{2}-\d{2}/)) {
+                        editarCelula(idx, 'data', iso);
+                    } else {
+                        editarCelula(idx, 'data', newValue);
+                    }
+                } else if (!newValue) {
+                    e.target.textContent = formatDateToBR(oldValue);
+                }
+            });
+            tdData.appendChild(dataSpan);
+            
+            const tdPalavra = row.insertCell(1);
+            const palavraSpan = document.createElement('span');
+            palavraSpan.setAttribute('contenteditable', 'true');
+            palavraSpan.classList.add('editable-cell', 'palavra-text');
+            palavraSpan.textContent = item.palavra;
+            palavraSpan.addEventListener('blur', (e) => {
+                const newValue = e.target.textContent.trim();
+                if (newValue && newValue !== item.palavra) {
+                    editarCelula(idx, 'palavra', newValue);
+                } else if (!newValue) {
+                    e.target.textContent = item.palavra;
+                }
+            });
+            tdPalavra.appendChild(palavraSpan);
+            
+            const tdTema = row.insertCell(2);
+            const temaSpan = document.createElement('span');
+            temaSpan.setAttribute('contenteditable', 'true');
+            temaSpan.classList.add('editable-cell');
+            temaSpan.style.background = "#e7ddca";
+            temaSpan.style.padding = "4px 10px";
+            temaSpan.style.borderRadius = "40px";
+            temaSpan.style.display = "inline-block";
+            temaSpan.textContent = item.tema;
+            temaSpan.addEventListener('blur', (e) => {
+                const newValue = e.target.textContent.trim().toUpperCase();
+                if (newValue && newValue !== item.tema) {
+                    editarCelula(idx, 'tema', newValue);
+                } else if (!newValue) {
+                    e.target.textContent = item.tema;
+                }
+            });
+            tdTema.appendChild(temaSpan);
+            
+            const tdRecep = row.insertCell(3);
+            const recepSpan = document.createElement('span');
+            recepSpan.setAttribute('contenteditable', 'true');
+            recepSpan.classList.add('editable-cell');
+            recepSpan.style.background = "#f3ecd9";
+            recepSpan.style.padding = "4px 10px";
+            recepSpan.style.borderRadius = "40px";
+            recepSpan.style.display = "inline-block";
+            recepSpan.textContent = item.recepcao;
+            recepSpan.addEventListener('blur', (e) => {
+                const newValue = e.target.textContent.trim().toUpperCase();
+                if (newValue && newValue !== item.recepcao) {
+                    editarCelula(idx, 'recepcao', newValue);
+                } else if (!newValue) {
+                    e.target.textContent = item.recepcao;
+                }
+            });
+            tdRecep.appendChild(recepSpan);
+            
+            row.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON' && !e.target.isContentEditable) {
+                    selectedRowIndex = idx;
+                    renderizarTabela();
+                }
+            });
+        });
+        atualizarStats();
+    }
+    
+    function atualizarStats() {
+        const temaCount = new Map(), recepCount = new Map();
+        currentData.forEach(item => {
+            const temaKey = (item.tema || "").toUpperCase();
+            const recepKey = (item.recepcao || "").toUpperCase();
+            temaCount.set(temaKey, (temaCount.get(temaKey) || 0) + 1);
+            recepCount.set(recepKey, (recepCount.get(recepKey) || 0) + 1);
+        });
+        const sortedTema = Array.from(temaCount.entries()).sort((a,b)=>b[1]-a[1]);
+        const sortedRecep = Array.from(recepCount.entries()).sort((a,b)=>b[1]-a[1]);
+        document.getElementById('statsTema').innerHTML = sortedTema.map(([n,q],i)=>`<span class="count-badge">${n}</span> (${q}x)${i<sortedTema.length-1?' • ':''}`).join('') || 'Nenhum';
+        document.getElementById('statsRecepcao').innerHTML = sortedRecep.map(([n,q],i)=>`<span class="count-badge">${n}</span> (${q}x)${i<sortedRecep.length-1?' • ':''}`).join('') || 'Nenhum';
+        document.getElementById('totalSemanas').innerText = currentData.length;
+        aplicarFiltro();
+    }
+    
+    function aplicarFiltro() {
+        const term = currentFilter.trim().toLowerCase();
+        const rows = document.querySelectorAll('#tableBody tr');
+        let visible = 0;
+        rows.forEach(row => {
+            if (term === '' || row.innerText.toLowerCase().includes(term)) {
+                row.style.display = '';
+                visible++;
+            } else row.style.display = 'none';
+        });
+        let statusSpan = document.querySelector('.info-status');
+        if (!statusSpan && document.querySelector('.search-box')) {
+            statusSpan = document.createElement('span');
+            statusSpan.className = 'info-status';
+            document.querySelector('.search-box')?.appendChild(statusSpan);
+        }
+        if (statusSpan) statusSpan.textContent = term ? ` (${visible} resultados)` : ` (${currentData.length} total)`;
+    }
+    
+    function printTable() { window.print(); }
+    
+    async function salvarAgora() {
+        await salvarNoFirestore();
+        mostrarNotificacao("💾 Alterações salvas manualmente!");
+    }
+    
+    function buildMonthFilter() {
+        const container = document.getElementById('monthNav');
+        if (!container) return;
+        container.innerHTML = '';
+        const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        months.forEach(month => {
+            const btn = document.createElement('button');
+            btn.textContent = month;
+            btn.classList.add('month-btn');
+            btn.addEventListener('click', () => {
+                const monthNum = months.indexOf(month)+1;
+                const monthStr = monthNum<10?`0${monthNum}`:`${monthNum}`;
+                document.querySelectorAll('#tableBody tr').forEach(row => {
+                    const firstCell = row.cells[0];
+                    if (firstCell && firstCell.innerText.split('/')[1] === monthStr) row.style.display = '';
+                    else row.style.display = 'none';
+                });
+                const statusSpan = document.querySelector('.info-status');
+                if (statusSpan) statusSpan.textContent = ` 📅 ${month} filtrado`;
+                document.getElementById('searchInput').value = '';
+                currentFilter = '';
+            });
+            container.appendChild(btn);
+        });
+        const allBtn = document.createElement('button');
+        allBtn.textContent = '📋 Mostrar Todos';
+        allBtn.classList.add('month-btn');
+        allBtn.style.background = "#dcc78f";
+        allBtn.addEventListener('click', () => { document.getElementById('searchInput').value = ''; currentFilter = ''; aplicarFiltro(); });
+        container.appendChild(allBtn);
+    }
+    
+    function setupSearch() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.addEventListener('input', (e) => { currentFilter = e.target.value; aplicarFiltro(); });
+    }
+    
+    function setupColumnTitleEditing() {
+        const colunaTitulo = document.getElementById('colunaPalavraTitulo');
+        if (colunaTitulo) {
+            colunaTitulo.addEventListener('blur', function() {
+                const newTitle = colunaTitulo.textContent.trim();
+                if (newTitle) {
+                    localStorage.setItem('colunaPalavraTitulo', newTitle);
+                }
+            });
+        }
+    }
+    
+    function setupEditableSubtitle() {
+        const subtitleEl = document.getElementById('subtitle');
+        if (subtitleEl) {
+            const saved = localStorage.getItem('programSubtitleCEI2026');
+            if (saved && saved.trim()) subtitleEl.textContent = saved;
+            subtitleEl.addEventListener('blur', () => {
+                const newSubtitle = subtitleEl.textContent.trim();
+                if (newSubtitle) {
+                    localStorage.setItem('programSubtitleCEI2026', newSubtitle);
+                }
+            });
+        }
+    }
+    
+    function setupGlobalButtons() {
+        document.getElementById('addRowEndBtn')?.addEventListener('click', addToEnd);
+        document.getElementById('printTableBtn')?.addEventListener('click', printTable);
+        document.getElementById('syncNowBtn')?.addEventListener('click', salvarAgora);
+    }
+    
+    // ==================== INICIALIZAÇÃO ====================
+    async function init() {
+        buildMonthFilter();
+        setupSearch();
+        setupGlobalButtons();
+        setupEditableSubtitle();
+        setupColumnTitleEditing();
+        await carregarDoFirestore();
+        mostrarNotificacao("✅ Programa carregado! Alterações salvas automaticamente.");
+    }
+    
+    init();
+</script>
+</body>
+</html>
