@@ -129,14 +129,11 @@
         .btn-success { background: #5f8b6f; color: white; }
         .btn-success:hover { background: #4e735b; }
 
-        .btn-save { background: #6b8c6e; color: white; }
-        .btn-save:hover { background: #557358; }
-
         .btn-warning { background: #e0a84a; color: white; }
         .btn-warning:hover { background: #c78f3a; }
 
-        .btn-danger { background: #b5655a; color: white; }
-        .btn-danger:hover { background: #9a4a3f; }
+        .btn-save { background: #6b8c6e; color: white; }
+        .btn-save:hover { background: #557358; }
 
         .btn:hover { transform: translateY(-1px); filter: brightness(0.96); }
 
@@ -295,6 +292,11 @@
             padding: 4px 14px;
             font-size: 0.75rem;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+        .month-btn:hover {
+            background: #e0d5be;
+            transform: translateY(-1px);
         }
         .info-status { font-size: 0.75rem; color: #b38647; margin-left: 10px; }
         .selected-row-highlight { background-color: #fff0d6 !important; }
@@ -310,32 +312,12 @@
             font-size: 0.9rem;
             z-index: 3000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            animation: fadeOut 2s ease forwards;
+            animation: fadeOut 2.5s ease forwards;
         }
         @keyframes fadeOut {
             0% { opacity: 1; transform: translateY(0); }
             70% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-20px); visibility: hidden; }
-        }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .loading-spinner {
-            background: white;
-            padding: 20px 40px;
-            border-radius: 60px;
-            font-size: 1rem;
-            color: #4a3a26;
         }
     </style>
 </head>
@@ -353,7 +335,7 @@
             <button class="btn btn-success" id="addRowEndBtn">➕ Incluir (final)</button>
             <button class="btn btn-primary" id="printTableBtn">🖨️ Imprimir / PDF</button>
             <button class="btn btn-warning" id="syncNowBtn">🔄 Sincronizar Agora</button>
-            <button class="btn btn-danger" id="resetDataBtn">↺ Resetar Original</button>
+            <button class="btn btn-save" id="saveChangesBtn">💾 Salvar Alterações</button>
         </div>
         <div class="search-box">
             <span>🔍</span>
@@ -380,7 +362,7 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                <tr><td colspan="4" style="text-align:center; padding: 2rem;">🔄 Carregando dados do Firebase...</td></tr>
+                <tr><td colspan="4" style="text-align:center; padding: 2rem;">🔄 Carregando dados...</td></tr>
             </tbody>
         </table>
     </div>
@@ -394,59 +376,42 @@
 </div>
 
 <script>
-    // ==================== CONFIGURAÇÃO DO FIREBASE ====================
-    // Substitua pelos dados do seu projeto Firebase!
+    // ============================================================
+    // 🔥 CONFIGURAÇÃO DO FIREBASE - CONFIGURADA E PRONTA! 🔥
+    // ============================================================
+    
     const firebaseConfig = {
-        apiKey: "AIzaSyDEFAULT_KEY_PLEASE_REPLACE",
-        authDomain: "seu-projeto.firebaseapp.com",
-        projectId: "seu-projeto",
-        storageBucket: "seu-projeto.firebasestorage.app",
-        messagingSenderId: "000000000000",
-        appId: "1:000000000000:web:0000000000000000000000"
+        apiKey: "AIzaSyCv86vyAhZZO7xmebGIqSPRMxqf9UScKgM",
+        authDomain: "luz-divina-176ef.firebaseapp.com",
+        projectId: "luz-divina-176ef",
+        storageBucket: "luz-divina-176ef.firebasestorage.app",
+        messagingSenderId: "812955375823",
+        appId: "1:812955375823:web:2bf5e75b89c682fdf47fba"
     };
     
-    // INSTRUÇÕES PARA CONFIGURAR O FIREBASE:
-    // 1. Acesse https://console.firebase.google.com/
-    // 2. Crie um novo projeto (ou use um existente)
-    // 3. No console do Firebase, vá em "Firestore Database" e crie o banco de dados
-    // 4. Vá em "Configurações do projeto" > "Seus apps" > Adicionar app web
-    // 5. Copie as configurações do Firebase e substitua acima
-    // 6. Nas regras do Firestore, cole as regras abaixo (modo desenvolvimento):
-    /*
-    rules_version = '2';
-    service cloud.firestore {
-      match /databases/{database}/documents {
-        match /{document=**} {
-          allow read, write: if true;  // Permite qualquer pessoa ler/escrever
-        }
-      }
-    }
-    */
-    // 7. ATENÇÃO: Em produção, restrinja as regras adequadamente!
-    
-    // Inicializar Firebase
+    // Inicialização do Firebase
     let db;
     let isFirebaseConfigured = false;
     let firestoreUnsubscribe = null;
+    let isOnline = true;
     
-    try {
-        if (firebaseConfig.apiKey !== "AIzaSyDEFAULT_KEY_PLEASE_REPLACE") {
+    // Verificar se as configurações são válidas
+    if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+        try {
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             isFirebaseConfigured = true;
-            console.log("Firebase inicializado com sucesso!");
-        } else {
-            console.warn("Firebase não configurado. Configure suas credenciais no firebaseConfig.");
+            console.log("✅ Firebase inicializado com sucesso!");
+        } catch (e) {
+            console.error("❌ Erro ao inicializar Firebase:", e);
+            mostrarNotificacao("⚠️ Erro ao conectar ao Firebase.", "erro");
         }
-    } catch (e) {
-        console.error("Erro ao inicializar Firebase:", e);
+    } else {
+        console.log("ℹ️ Firebase não configurado. Usando apenas localStorage.");
+        mostrarNotificacao("ℹ️ Modo offline. Configure o Firebase para sincronização.", "info");
     }
     
-    // ==================== DADOS ====================
-    const DADOS_COLLECTION = "programa_2026";
-    const METADATA_DOC = "metadata";
-    
-    // Dados originais (backup)
+    // Dados originais
     const originalData = [
         { data: "2026-01-14", palavra: "62. No campo do verbo.", tema: "MARCILEY", recepcao: "EVALDO" },
         { data: "2026-01-21", palavra: "63. No campo da vida.", tema: "MIRIAM", recepcao: "MAURICIO" },
@@ -481,35 +446,40 @@
 
     let currentData = [];
     let isSyncing = false;
-    let pendingUpdate = false;
     let selectedRowIndex = null;
     let currentFilter = '';
     
-    // ==================== FUNÇÕES DE STATUS ====================
-    function atualizarStatus(conectado) {
-        const dot = document.getElementById('statusDot');
-        const text = document.getElementById('statusText');
-        if (conectado) {
-            dot.className = 'status-dot';
-            text.textContent = 'Firebase Online';
-        } else {
-            dot.className = 'status-dot offline';
-            text.textContent = 'Offline - Salvando localmente';
-        }
-    }
-    
+    // ==================== FUNÇÕES ÚTEIS ====================
     function mostrarNotificacao(mensagem, tipo = "sucesso") {
         const toast = document.createElement('div');
         toast.className = 'toast-message';
-        toast.style.background = tipo === "sucesso" ? "#4a7c59" : (tipo === "erro" ? "#b5655a" : "#e0a84a");
+        if (tipo === "sucesso") toast.style.background = "#4a7c59";
+        else if (tipo === "erro") toast.style.background = "#b5655a";
+        else if (tipo === "info") toast.style.background = "#6c8b9e";
+        else toast.style.background = "#e0a84a";
         toast.textContent = mensagem;
         document.body.appendChild(toast);
         setTimeout(() => {
-            toast.remove();
+            if (toast && toast.remove) toast.remove();
         }, 2500);
     }
     
-    // ==================== FUNÇÕES DE FORMATAÇÃO ====================
+    function atualizarStatus(conectado) {
+        isOnline = conectado;
+        const dot = document.getElementById('statusDot');
+        const text = document.getElementById('statusText');
+        if (conectado && isFirebaseConfigured) {
+            dot.className = 'status-dot';
+            text.textContent = '🔥 Firebase Online';
+        } else if (!isFirebaseConfigured) {
+            dot.className = 'status-dot offline';
+            text.textContent = '💾 Modo Local';
+        } else {
+            dot.className = 'status-dot offline';
+            text.textContent = '⚠️ Offline';
+        }
+    }
+    
     function formatDateToBR(dateStr) {
         if (!dateStr) return "";
         const parts = dateStr.split('-');
@@ -531,82 +501,77 @@
         return brDate;
     }
     
-    // ==================== FIREBASE OPERAÇÕES ====================
-    async function salvarNoFirebase(dados) {
-        if (!isFirebaseConfigured || !db) {
-            console.log("Firebase não configurado, salvando apenas localStorage");
-            salvarLocalmente(dados);
-            return false;
-        }
-        
-        try {
-            await db.collection(DADOS_COLLECTION).doc("programa_data").set({
-                data: dados,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            console.log("Dados salvos no Firebase");
-            return true;
-        } catch (e) {
-            console.error("Erro ao salvar no Firebase:", e);
-            mostrarNotificacao("⚠️ Erro ao salvar no Firebase. Dados salvos localmente.", "erro");
-            salvarLocalmente(dados);
-            return false;
-        }
-    }
-    
     function salvarLocalmente(dados) {
-        localStorage.setItem("cei_local_backup", JSON.stringify(dados));
+        try {
+            localStorage.setItem("cei_programa_backup", JSON.stringify(dados));
+            localStorage.setItem("cei_programa_last_update", new Date().toISOString());
+        } catch(e) {
+            console.error("Erro ao salvar localmente:", e);
+        }
     }
     
     function carregarLocalmente() {
-        const local = localStorage.getItem("cei_local_backup");
-        if (local) {
-            try {
-                return JSON.parse(local);
-            } catch(e) { return null; }
-        }
+        try {
+            const local = localStorage.getItem("cei_programa_backup");
+            if (local) return JSON.parse(local);
+        } catch(e) {}
         return null;
     }
     
+    // ==================== OPERAÇÕES FIREBASE ====================
+    async function salvarNoFirebase(dados) {
+        if (!isFirebaseConfigured || !db || !isOnline) {
+            salvarLocalmente(dados);
+            return false;
+        }
+        try {
+            await db.collection("programa_2026").doc("programa_data").set({
+                data: dados,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return true;
+        } catch (e) {
+            console.error("Erro ao salvar no Firebase:", e);
+            salvarLocalmente(dados);
+            isOnline = false;
+            atualizarStatus(false);
+            return false;
+        }
+    }
+    
     async function carregarDoFirebase() {
+        const localData = carregarLocalmente();
+        if (localData) {
+            currentData = localData;
+            renderizarTabela();
+        }
+        
         if (!isFirebaseConfigured || !db) {
-            const local = carregarLocalmente();
-            if (local) {
-                currentData = local;
-                renderizarTabela();
-                mostrarNotificacao("📱 Modo offline - usando dados salvos localmente");
-            } else {
+            if (!localData) {
                 currentData = JSON.parse(JSON.stringify(originalData));
                 renderizarTabela();
+                salvarLocalmente(currentData);
             }
             atualizarStatus(false);
             return;
         }
         
-        atualizarStatus(true);
-        
         try {
-            const doc = await db.collection(DADOS_COLLECTION).doc("programa_data").get();
+            const doc = await db.collection("programa_2026").doc("programa_data").get();
             if (doc.exists && doc.data().data) {
                 currentData = doc.data().data;
                 salvarLocalmente(currentData);
-                console.log("Dados carregados do Firebase");
-                mostrarNotificacao("✅ Dados sincronizados do Firebase!");
-            } else {
-                // Primeira execução - salvar dados originais
+                mostrarNotificacao("📡 Dados sincronizados do Firebase!");
+            } else if (!localData) {
                 currentData = JSON.parse(JSON.stringify(originalData));
                 await salvarNoFirebase(currentData);
                 mostrarNotificacao("📡 Dados iniciais salvos no Firebase!");
             }
             renderizarTabela();
+            atualizarStatus(true);
         } catch (e) {
             console.error("Erro ao carregar do Firebase:", e);
-            const local = carregarLocalmente();
-            if (local) {
-                currentData = local;
-                renderizarTabela();
-                mostrarNotificacao("⚠️ Usando dados locais (offline)", "erro");
-            } else {
+            if (!localData) {
                 currentData = JSON.parse(JSON.stringify(originalData));
                 renderizarTabela();
             }
@@ -614,60 +579,67 @@
         }
     }
     
-    // Inscrever para atualizações em tempo real
     function subscribeToFirestore() {
         if (!isFirebaseConfigured || !db) return;
+        if (firestoreUnsubscribe) firestoreUnsubscribe();
         
-        if (firestoreUnsubscribe) {
-            firestoreUnsubscribe();
-        }
-        
-        firestoreUnsubscribe = db.collection(DADOS_COLLECTION).doc("programa_data")
+        firestoreUnsubscribe = db.collection("programa_2026").doc("programa_data")
             .onSnapshot((doc) => {
                 if (doc.exists && doc.data().data && !isSyncing) {
                     const novosDados = doc.data().data;
-                    // Verificar se realmente mudou
                     if (JSON.stringify(novosDados) !== JSON.stringify(currentData)) {
                         currentData = novosDados;
                         salvarLocalmente(currentData);
                         renderizarTabela();
-                        mostrarNotificacao("🔄 Atualização em tempo real recebida!");
+                        mostrarNotificacao("🔄 Atualização em tempo real!");
                     }
                 }
                 atualizarStatus(true);
+                isOnline = true;
             }, (error) => {
                 console.error("Erro no snapshot:", error);
                 atualizarStatus(false);
+                isOnline = false;
             });
     }
     
     async function sincronizarAgora() {
         if (!isFirebaseConfigured) {
-            mostrarNotificacao("Firebase não configurado. Configure as credenciais.", "erro");
+            mostrarNotificacao("Firebase não configurado.", "erro");
             return;
         }
         isSyncing = true;
-        await salvarNoFirebase(currentData);
+        mostrarNotificacao("🔄 Sincronizando...", "info");
+        const sucesso = await salvarNoFirebase(currentData);
         isSyncing = false;
-        mostrarNotificacao("🔄 Sincronização concluída!");
+        if (sucesso) {
+            mostrarNotificacao("✅ Sincronização concluída!");
+            atualizarStatus(true);
+        } else {
+            mostrarNotificacao("⚠️ Falha na sincronização.", "erro");
+        }
     }
     
-    async function resetarParaOriginal() {
-        if (confirm("⚠️ ATENÇÃO: Isso vai restaurar os dados originais e perder todas as alterações feitas. Confirmar?")) {
-            currentData = JSON.parse(JSON.stringify(originalData));
-            await salvarNoFirebase(currentData);
-            renderizarTabela();
-            mostrarNotificacao("🔄 Dados restaurados para o original!");
+    async function salvarAlteracoes() {
+        mostrarNotificacao("💾 Salvando alterações...", "info");
+        const sucesso = await salvarNoFirebase(currentData);
+        if (sucesso) {
+            mostrarNotificacao("✅ Todas as alterações foram salvas com sucesso!");
+        } else {
+            mostrarNotificacao("⚠️ Alterações salvas apenas localmente. Verifique sua conexão.", "erro");
         }
     }
     
     // ==================== EDIÇÃO DE DADOS ====================
     async function editarCelula(idx, campo, novoValor) {
         if (currentData[idx] && currentData[idx][campo] !== undefined) {
-            currentData[idx][campo] = campo === 'tema' || campo === 'recepcao' ? novoValor.toUpperCase() : novoValor;
-            renderizarTabela(); // Re-renderiza imediatamente para feedback visual
-            await salvarNoFirebase(currentData);
-            mostrarNotificacao("💾 Alteração salva!");
+            if (campo === 'tema' || campo === 'recepcao') {
+                currentData[idx][campo] = novoValor.toUpperCase();
+            } else {
+                currentData[idx][campo] = novoValor;
+            }
+            renderizarTabela();
+            mostrarNotificacao("✏️ Edição realizada. Clique em 'Salvar Alterações' para confirmar.");
         }
     }
     
@@ -696,7 +668,6 @@
     async function addToEndExecutar() {
         const newItem = generateNewItem();
         currentData.push(newItem);
-        // Renumerar
         let counter = 62;
         for (let i = 0; i < currentData.length; i++) {
             const match = currentData[i].palavra.match(/(\d+)\.\s*(.*)/);
@@ -710,9 +681,8 @@
             counter++;
         }
         selectedRowIndex = currentData.length - 1;
-        await salvarNoFirebase(currentData);
         renderizarTabela();
-        mostrarNotificacao("✅ Nova semana adicionada com sucesso!");
+        mostrarNotificacao("✅ Nova semana adicionada! Clique em 'Salvar Alterações' para confirmar.");
     }
     
     // ==================== RENDERIZAÇÃO ====================
@@ -721,11 +691,11 @@
         if (!tbody) return;
         tbody.innerHTML = '';
         
-        if (currentData.length === 0) {
+        if (!currentData || currentData.length === 0) {
             const emptyRow = tbody.insertRow();
             const emptyCell = emptyRow.insertCell(0);
             emptyCell.colSpan = 4;
-            emptyCell.textContent = "📋 Nenhuma semana cadastrada. Clique em 'Incluir' para adicionar uma nova semana.";
+            emptyCell.textContent = "📋 Nenhuma semana cadastrada. Clique em 'Incluir' para adicionar.";
             emptyCell.style.textAlign = "center";
             emptyCell.style.padding = "2rem";
             emptyCell.style.fontStyle = "italic";
@@ -745,16 +715,11 @@
             dataSpan.textContent = formatDateToBR(item.data);
             dataSpan.addEventListener('blur', async function(e) {
                 const newValue = e.target.textContent.trim();
-                const oldValue = item.data;
-                if (newValue && newValue !== formatDateToBR(oldValue)) {
+                if (newValue && newValue !== formatDateToBR(item.data)) {
                     const iso = formatDateToISO(newValue);
-                    if (iso && iso.match(/\d{4}-\d{2}-\d{2}/)) {
-                        await editarCelula(idx, 'data', iso);
-                    } else {
-                        await editarCelula(idx, 'data', newValue);
-                    }
+                    await editarCelula(idx, 'data', iso || newValue);
                 } else if (!newValue) {
-                    e.target.textContent = formatDateToBR(oldValue);
+                    e.target.textContent = formatDateToBR(item.data);
                 }
             });
             tdData.appendChild(dataSpan);
@@ -878,35 +843,33 @@
         allBtn.textContent = '📋 Mostrar Todos';
         allBtn.classList.add('month-btn');
         allBtn.style.background = "#dcc78f";
-        allBtn.addEventListener('click', () => { document.getElementById('searchInput').value = ''; currentFilter = ''; aplicarFiltro(); });
+        allBtn.addEventListener('click', () => { 
+            document.getElementById('searchInput').value = ''; 
+            currentFilter = ''; 
+            aplicarFiltro(); 
+        });
         container.appendChild(allBtn);
     }
     
     function setupSearch() {
         const searchInput = document.getElementById('searchInput');
-        if (searchInput) searchInput.addEventListener('input', (e) => { currentFilter = e.target.value; aplicarFiltro(); });
+        if (searchInput) searchInput.addEventListener('input', (e) => { 
+            currentFilter = e.target.value; 
+            aplicarFiltro(); 
+        });
     }
     
     function setupColumnTitleEditing() {
         const colunaTitulo = document.getElementById('colunaPalavraTitulo');
         if (colunaTitulo) {
             const savedTitle = localStorage.getItem('colunaPalavraTitulo');
-            if (savedTitle && savedTitle.trim()) {
-                colunaTitulo.textContent = savedTitle;
-            }
+            if (savedTitle && savedTitle.trim()) colunaTitulo.textContent = savedTitle;
             colunaTitulo.addEventListener('blur', function() {
                 const newTitle = colunaTitulo.textContent.trim();
-                if (newTitle) {
-                    localStorage.setItem('colunaPalavraTitulo', newTitle);
-                    mostrarNotificacao("✨ Título da coluna salvo!");
-                }
+                if (newTitle) localStorage.setItem('colunaPalavraTitulo', newTitle);
+                mostrarNotificacao("✨ Título da coluna salvo localmente!");
             });
-            colunaTitulo.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    colunaTitulo.blur();
-                }
-            });
+            colunaTitulo.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); colunaTitulo.blur(); } });
         }
     }
     
@@ -917,10 +880,8 @@
             if (saved && saved.trim()) subtitleEl.textContent = saved;
             subtitleEl.addEventListener('blur', () => {
                 const newSubtitle = subtitleEl.textContent.trim();
-                if (newSubtitle) {
-                    localStorage.setItem('programSubtitleCEI2026', newSubtitle);
-                    mostrarNotificacao("📝 Subtítulo salvo!");
-                }
+                if (newSubtitle) localStorage.setItem('programSubtitleCEI2026', newSubtitle);
+                mostrarNotificacao("📝 Subtítulo salvo localmente!");
             });
             subtitleEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); subtitleEl.blur(); } });
         }
@@ -930,7 +891,7 @@
         document.getElementById('addRowEndBtn')?.addEventListener('click', addToEndExecutar);
         document.getElementById('printTableBtn')?.addEventListener('click', printTable);
         document.getElementById('syncNowBtn')?.addEventListener('click', sincronizarAgora);
-        document.getElementById('resetDataBtn')?.addEventListener('click', resetarParaOriginal);
+        document.getElementById('saveChangesBtn')?.addEventListener('click', salvarAlteracoes);
     }
     
     async function init() {
@@ -939,11 +900,9 @@
         buildMonthFilter();
         setupEditableSubtitle();
         setupColumnTitleEditing();
-        
         await carregarDoFirebase();
         subscribeToFirestore();
-        
-        mostrarNotificacao("✅ Programa carregado! Banco de dados em tempo real ativo.");
+        mostrarNotificacao("✅ Programa carregado! Edite e clique em 'Salvar Alterações' para confirmar.", "sucesso");
     }
     
     init();
